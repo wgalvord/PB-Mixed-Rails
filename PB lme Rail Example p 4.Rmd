@@ -1,0 +1,217 @@
+---
+title: "P&B MM Rail p4"
+author: "Douglas Bates, W Greg Alvord, & Nick Carchedi"
+date: "November 17, 2014"
+output: pdf_document
+---
+
+```{r, echo=FALSE}
+suppressWarnings(library(knitr))
+hook_output <- knit_hooks$get("output")
+knit_hooks$set(output = function(x, options) {
+   lines <- options$output.lines
+   if (is.null(lines)) {
+     return(hook_output(x, options))  # pass to default hook
+   }
+   x <- unlist(strsplit(x, "\n"))
+   more <- "..."
+   if (length(lines)==1) {        # first n lines
+     if (length(x) > lines) {
+       # truncate the output, but add ....
+       x <- c(head(x, lines), more)
+     }
+   } else {
+     x <- c(more, x[lines], more)
+   }
+   # paste these lines together
+   x <- paste(c(x, ""), collapse = "\n")
+   hook_output(x, options)
+ })
+```
+
+```{r, echo=FALSE}
+library(nlme)
+options(show.signif.stars = FALSE)
+```
+\section{Opening Observations}
+
+[Note: This document reflects initial attempts using RMarkdown for Pinheiro and Bates' Rail example.  Much of the text is directly copied from Pinheiro and Bates (2000), designated as PB or P&B throughout. Commentary is provided in connection with certain RMarkdown commands, etc.]
+
+\section{Mixed Models Rail Example, Pinheiro and Bates, page 4}
+\subsection{Introduction to the Rail Problem}
+We begin with the first example discussed by Pinheiro and Bates (2000).  Six rails were chosen at random; each rail was tested three times by measuring the time it took for a certain type of ultrasonic wave to travel the length of the rail.  The engineers were interested in: (1) the average travel time for a 'typical' rail (the *expected travel time*), (2) the *variation* in average travel time among the rails (*between-rail variability*), and (3) the *variation* in the observed travel times for a single rail (the *within-rail variability*).  We see from Figure 1.1 that there is considerable variability in the mean travel times among the different rails.
+
+```{r}
+plot(Rail, main = 'PB Figure 1.1 - Rail groupedData data frame')
+```
+
+Here is the \texttt{groupedData} data frame. . .  
+
+```{r}
+Rail
+```
+
+
+
+The 'rail effects' indicated in Figure 1.2 may be incorporated into the model for the travel times by allowing the mean of each rail to be represented by a separate parameter.  This _fixed-effects_ model for the one-way classification is written
+
+$$
+\hspace{40 mm}y_{ij} = \beta_{i} + \epsilon_{ij},  \hspace{2 mm} i = 1, ..., M, \hspace{2 mm}  j = 1, ...,n_{i} \hspace{40 mm} \texttt{PB eq(1.2)}
+$$
+
+where the $\beta_{i}$ represents the mean travel time of rail $i$ and, as in (PB eqn 1.1), the errors $\epsilon_{ij}$ are assumed to be independently distributed as $N (0, \sigma^{2})$. [Note: I have used hspace{40 mm} in the front of this equation.  I have also used texttt{} for the equation number at this early stage.]
+
+Here is the model for P&B equation (1.2).  [In an experiment with RMarkdown, only the coefficients have been printed with this output. The argument \texttt{output.lines = 9:16} was added in the RMarkdown code.]  
+
+```{r, output.lines=9:16}
+fm2Rail.lm <- lm(travel ~ as.factor(Rail) - 1, data = Rail)
+summary(fm2Rail.lm)
+```
+
+The estimates here show the mean \texttt{travel} values for each of the rails.  The means could also be obtained with command 
+
+```{r}
+with(Rail, tapply(travel, Rail, mean))
+```
+
+
+
+Even though the fixed-effects model (1.2) accounts for the rail effects, it does not provide a useful representation of the rails data.  Its only models the \emph{specific sample of rails used in this particular experiment}, while the main interest is in the _population_ of rails from which the sample was drawn.  In particular, \texttt{fm2Rail.lm} does _not_ provide an estimate of the _between-rail_ variability, which is one of the central quantities of interest in the rails experiment.  Another drawback of this fixed-effects model is that the number of parameters in the model increases linearly with the number of rails.  
+
+A *random-effects* model circumvents these problems by treating the rail effects as random variations around a population mean.  The following reparameterization of model \texttt{(1.2)} helps motivate the random-effects model for the rails data.  We write
+
+\begin{equation}
+\hspace{20 mm} y_{ij} = \bar{\beta} + (\beta_{i} - \bar{\beta}) + \epsilon_{ij} \hspace{40 mm} \texttt{PB eq(1.3)}
+\end{equation}
+
+Repeating this (i.e., experimenting with RMarkdown). . . 
+
+\begin{equation}
+y_{ij} = \bar{\beta} + (\beta_{i} - \bar{\beta}) + \epsilon_{ij} 
+\end{equation}
+
+where $\bar{\beta} = \sum_{i = 1}^6\beta{i}/6$ represents the average travel time for the rails in the experiment.  The random-effects model replaces $\bar{\beta}$ with the mean travel time over the _population of rails_ and replaces the deviations $\beta_{i} - \bar{\beta}$ by random variables whose distribution is to be estimated. 
+
+A random-effects model for the one-way classification used in the rails experiment is written. . . [Note also that when we used begin{equation} and end{equation}, commands from LaTeX, we got the equation number in parentheses (1).]  
+
+$$
+\hspace{20 mm} y_{ij} = \beta + b_{i} + \epsilon_{ij}, \hspace{20 mm} \mbox{PB (1.4)}
+$$
+
+where $\beta$ is the mean travel time across the population of rails being sampled, $b_{i}$ is a random variable representing the deviation from the population mean of the mean travel time for the $i$th rail, and $\epsilon_{ij}$ is a random variable representing the deviation in travel time for observation $j$ on rail $i$ from the mean travel time for all rail $i$.   [Note: In equation (1.4) I used mbox{}.]  
+
+To complete the statistical model, we must specify the distribution of the random variables $b_{i}, i = 1, ..., M$ and $\epsilon_{ij}, i = 1, ..., M; j = 1, ..., n_{i}$.  We begin by modeling both of these as independent, constant variance, denoted by $\sigma^{2}_{b}$ for the $b_{i}$ or _between-rail_ variability, and $\sigma^{2}$ for the $\epsilon_{ij}$ or *within-rail* variability.  That is
+
+\begin{equation}
+b_{i} \sim \textsl{N}(0, \sigma^{2}_{b}), \hspace{4 mm} \epsilon_{ij} \sim \textsl{N} (0, \sigma^{2})
+\end{equation}
+
+This model may be modified if it does not seem appropriate.  As described in Chapter 4, PB encourage using graphical and numberical diagnostic tools to assess the validity of the model and to suggest ways in which it could be modified.  To start, however, we use the simple model. 
+
+
+First, we fit the \texttt{lme} model for the Rail data.
+
+```{r}
+fm1Rail.lme <- lme(travel ~ 1, data = Rail, random = ~ 1 | Rail)
+```
+
+Here, we show the \texttt{print()} for the object \texttt{fm1Rail.lme}.
+
+```{r}
+fm1Rail.lme
+```
+
+Now,we show the \texttt{summary()} function for the same item.  Here it is.
+
+```{r}
+summary(fm1Rail.lme)
+```
+
+This model, which has two sources of random variation, $b_{i}$ and $\epsilon_{ij}$, is sometimes called a _hierarchical_ model (references, etc.) or a _multilevel_ model. The $b_{i}$ are called _random_ effects because they are associated with the particular experimental units - rails in this case - that are selected at random from the population of interest.  They are _effects_ because they represent a deviation from an overall mean.  That is, the "effect" of choosing rail $i$ is to shift the mean travel time from $\beta$ to $\beta + b_{i}$.  Because observations made on the same rail share the same random effect $b_{i}$, they are correlated.  The covariance between observations on the same rail is $\sigma^{2}_{b}$ corresponding to a correlation of $\sigma^{2}_{b}/(\sigma^{2}_{b} + \sigma^{2})$.
+
+The parameters of the statistical model created by combining (P&B 1.4) and (P&B 1.5) are $\beta$, $\sigma^{2}_{b}$, and $\sigma^{2}$.  Note that the number of parameters for this particular problem will always be three (i.e., 3), irrespective of the number of rails in the experiment. Although the random effects, $b_{i}, i = 1, ..., M$ may behave like parameters, formally, they just represent another level of random variation in the model - so we do not 'estimate' them as such.  We will, however, form predictions $\hat{\beta}$ of thge values of these random variables, given the data we observed.  
+
+The REML estimates for the parameters are calculated as
+
+$$
+\hat{\beta} = 66.5, \hspace{5 mm} \hat{\sigma_{b}} = 24.805, \hspace{5 mm} \hat{\sigma} = 4.0208 
+$$
+
+Here is an equation presented, in matrix form, on page 14 of P&B.  [We jump ahead just a little bit.]
+
+\begin{equation}
+y_{i} = X_{i}\beta + Z_{i}b_{i} + \epsilon_{i}  
+\end{equation}
+
+
+Now, we construct these quantities in matrix form and apply them to the data for the first rail. 
+
+```{r}
+X1 <- matrix(1, nrow = 3, ncol = 1)
+X1
+beta.hat <- fixef(fm1Rail.lme)
+beta.hat
+b1 <- ranef(fm1Rail.lme)[3,1]
+b1
+Z1 <- X1
+epsilon1 <- resid(fm1Rail.lme)[1:3]
+epsilon1
+```
+
+Now we will display $y_{1}$ and $y_{1}$ as computed from the matrix equation.
+
+```{r}
+## display y1
+y1 <- Rail$travel[1:3]
+y1
+##
+## Compute y1 as predicted from lme model
+y1.computed <- X1 %*% beta.hat + Z1 %*% b1 + epsilon1
+y1.computed
+##
+round(y1, 8) == round(y1.computed, 8)
+```
+
+
+
+
+
+
+\hspace{20 mm}
+
+
+
+
+This is equation 1.3, p. 7, in P&B.
+
+$$
+y_{ij} = \bar{\beta} + \beta_{i} - \bar{\beta} + \epsilon_{ij}
+$$
+This is equation 1.3, p. 7, in P&B. [Note: This equation was obtained with the LaTeX/RMarkdown command \texttt{boldsymbol{}}]
+
+$$
+\boldsymbol{y_{ij} = \bar{\beta} + \beta_{i} - \bar{\beta} + \epsilon_{ij}}
+$$
+
+
+Now, I will try to enter the equation from LaTeX. 
+
+\section{References}
+
+Pinheiro JC & Bates DM (2000)  \emph{Mixed Effects Models in S and S-Plus} Springer
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+summary(cars)
+```
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+plot(cars)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
