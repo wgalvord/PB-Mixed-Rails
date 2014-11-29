@@ -172,6 +172,9 @@ y1.computed
 round(y1, 8) == round(y1.computed, 8)
 ```
 
+\subsection{Assessing the Fitted Model}
+
+This next plot reproduces Figure 1.4 in PB, (page 11).    
 
 
 
@@ -181,6 +184,15 @@ round(y1, 8) == round(y1.computed, 8)
 
 
 
+
+
+ 
+
+\section{References}
+
+Pinheiro JC & Bates DM (2000)  \emph{Mixed Effects Models in S and S-Plus} Springer
+
+\section{Redundant comments}
 
 This is equation 1.3, p. 7, in P&B.
 
@@ -193,12 +205,6 @@ $$
 \boldsymbol{y_{ij} = \bar{\beta} + \beta_{i} - \bar{\beta} + \epsilon_{ij}}
 $$
 
-
-Now, I will try to enter the equation from LaTeX. 
-
-\section{References}
-
-Pinheiro JC & Bates DM (2000)  \emph{Mixed Effects Models in S and S-Plus} Springer
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
